@@ -1,0 +1,15 @@
+name: "Dpp"
+navbar:
+  title: "Dpp"
+  left:
+    - text: "主页"
+      href: index.html
+    - text: "综述"
+      href: Overview.html
+    - text: "示例"
+      href: Vignettes.html
+    - text: "博客"
+      href: Blogs.html
+    - text: "链接"
+      href: Links.html
+output_dir: "docs"

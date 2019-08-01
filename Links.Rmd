@@ -1,0 +1,14 @@
+---
+title: "学习资源"
+output: html_document
+---
+
+### R and R-Studio
+
+[R](http://www.r-project.org) is a free open-source programming language that can be used for statistical analysis, data-simulation, graphing, and lots of other stuff. Another free program is [R-studio](http://www.rstudio.com), that provides a nice graphic interface for R. Download R first, then download R-studio. Both can run on PCs, Macs or Linux. Students will be learning R in the stats labs using the lab manual []().
+
+### 其他R学习资源
+
+1. Google is great, Google your problem
+2. [Stackoverflow](https://stackoverflow.com) ，当通过Google搜索问题时经常会在这个网站上找到类似的提问及多种方式的解答。
+

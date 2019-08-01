@@ -1,0 +1,1147 @@
+---
+title: "工具包中所有示例的有序展示"
+author: "Jizhou Kang"
+date: "7/31/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE,fig.width=6,fig.height=4)
+```
+
+*这份示例将按照数据分析的一般过程来展示工具包中的所有示例。*
+
+
+## 0. 数据准备
+
+### 0.1 载入工具包
+
+```{r,message=FALSE,warning=FALSE}
+library(dppbar)
+```
+
+### 0.2 载入数据
+
+**Data 1: 中国乳制品企业部分财务数据(2006-2017)**
+```{r,echo=FALSE}
+data("dairy_fin_charts")
+head(dairy_fin_charts,5)
+```
+
+**Data 2: 中国房地产企业部分财务数据(2007-2016)**
+```{r,echo=FALSE}
+data("estate_fin_charts")
+head(estate_fin_charts[,1:5],5)
+```
+
+**Data 3:中国机械制造业企业部分财务数据(2000-2017)**
+```{r,echo=FALSE}
+data("machinery_fin_charts")
+head(machinery_fin_charts[,1:5],5)
+```
+
+**Data 4:一些中国宏观经济指标(2008-2016)**
+```{r,echo=FALSE}
+data("macro_data_chn")
+head(macro_data_chn[,1:5],5)
+```
+
+**Data 5: 天猫上液体乳产品销量数据(累积到 2018-07)**
+```{r,echo=FALSE}
+data("tmall_milk_sales")
+head(tmall_milk_sales[,1:5],5)
+```
+
+
+## 1. 数据预处理
+
+### 1.1 column_class(): 将数据集中的变量按数值型和字符型分类
+
+做数据分析时经常需要区分字符型变量和数值型变量。这个函数能轻松完成这一任务。它的用法和参数如下：
+
+**column_class(dataframe)**
+
+- *dataframe:*	数据框型变量
+
+```{r}
+machinery_fin_charts_class=column_class(machinery_fin_charts)
+machinery_fin_charts_class$numerical
+machinery_fin_charts_class$categorical
+```
+
+### 1.2 num2ctg(): 将数值型变量转为字符型变量
+
+有时候会需要把数值型变量转换成字符型变量，这个函数能通过三种方式实现：将数值型变量均分为N组然后赋值，将数值型变量按指定的百分比分组或按指定的阈值分组。其用法和参数如下：
+
+
+**num2ctg(dataframe,col.id,col.name=NA,partition,level.name,type='quantile')**
+
+- *dataframe:* 数据框型变量
+
+- *col.id:*	要转换的数值型变量所在列的位置
+
+- *col.name:*	要转换的数值型变量所在列的列名，如果“col.id”给定则这个参数自动被忽略
+
+- *partition:* 一个数字组成的向量，指定转换的条件
+
+- *level.name:*	一个字符组成的向量，指定给各组数值变量赋予的字符
+
+- *type:*	下面三个字符中的一个： "quantile", "equal", and "criteria", 表示不同的划分方式, 初始设定为 "quantile"
+
+```{r}
+test_df=macro_data_chn
+test_df$PPI[2:4]=NA
+test_df$PPI
+num2ctg(test_df,col.name = 'PPI',partition = c(0.2,0.5,0.3))
+num2ctg(test_df,col.name = 'PPI',partition = c(98,100),
+level.name = c('low','medium','high'),type='criteria')
+num2ctg(test_df,col.name = 'PPI',partition = 3,
+level.name = c('low','medium','high'),type='equal')
+num2ctg(test_df,col.id = 4,partition = 3,
+level.name = c('low','medium','high'),type='equal')
+```
+
+这个函数也可以处理含缺失值的列，对于这样的列这个函数仍会保留缺失值
+
+当然，我们还需要把字符型变量转换成数值型变量。理论上讲有两种不同的字符型变量，有序的和无序的，我们需要用不同的方式来转化=换。
+
+### 1.3 ord_ctg2num():将有序字符型变量转为数值型变量
+
+这个函数用来将有序型字符变量转换成数值型变量，将按照指定顺序给字符型变量赋值。其用法和参数说明如下：
+
+**ord_ctg2num(dataframe,col.id,col.name=NA,permutation,numeric_levels)**
+
+- *dataframe:* 数据框型变量
+
+- *col.id:*	要转换的数值型变量所在列的位置
+
+- *col.name:*	要转换的数值型变量所在列的列名，如果“col.id”给定则这个参数自动被忽略
+
+- *permutation:*	字符型变量的一个排列，排列中第一个元素将被赋予最小的数值
+
+- *numeric_levels:*	一个数值向量用来表示被赋给字符的数值，初始设定为从1开始的与不同字符变量等长的数列
+
+```{r}
+test_df=tmall_milk_sales
+test_df$label[12:15]=NA
+ord_ctg2num(test_df,col.name = 'label',permutation = c('P','O','H'))[1:10]
+ord_ctg2num(test_df,col.id = 11,permutation = c('P','O','H'))[1:10]
+ord_ctg2num(test_df,col.id = 11,permutation = c('P','O','H'),
+numeric_levels=c(1,5,10))[1:10]
+```
+
+### 1.4 nom_ctg2num(): 将无序型字符变量转换成数值型变量
+
+将数据框中的多个无序型字符变量通过构造哑变量的方法转换成数值型变量，可以明确每个字符型变量中用作基准线的变量。该函数的用法和参数如下： 
+
+**nom_ctg2num(dataframe,col.id,col.name=NA,drop)**
+
+- *dataframe:*	数据框型变量
+
+- *col.id:*	要转换的数值型变量所在列的位置
+
+- *col.name:*	要转换的数值型变量所在列的列名，如果“col.id”给定则这个参数自动被忽略
+
+- *drop:*	每个字符型变量中由哪个元素组成的哑变量将被删去，可以不提供这个参数
+
+```{r}
+test_df=tmall_milk_sales
+nom_ctg2num(test_df,col.id=c(1,2,3,4,5))[1:5,]
+nom_ctg2num(test_df,col.name=c('label','promotion'),drop=c('H','N'))[1:5,]
+```
+
+当要转换的字符型变量中有缺失值时应当注意，缺失值会被当成另一个单独的哑变量。
+
+### 1.5 miss_prep(): 查看缺失数据模式并做预处理
+
+这个函数用来查看数据集缺失值的模式，并可以指定是否删除部分缺失较多的行或者列。函数的使用和参数定义如下：
+
+**miss_prep(dataframe,remove.column=TRUE,remove.row=FALSE)**
+
+- *dataframe:*	数据框型变量
+
+- *drop.column:*	是否删去缺失多的列，初始设定为TRUE
+
+- *drop.row:*	是否删去缺失多的行，初始设定为 FALSE
+
+```{r}
+test_df=tmall_milk_sales
+test_df[sample(1:nrow(test_df),200),'promotion'] <- NA
+test_df[sample(1:nrow(test_df),50),'feature'] <- NA
+test_df[sample(1:nrow(test_df),20),'units'] <- NA
+test_df[sample(1:nrow(test_df),5),'unit_price'] <- NA
+
+miss=miss_prep(test_df)
+miss$pattern
+
+miss_prep(miss$df,remove.row = TRUE)$pattern
+```
+
+
+### 1.6 impute_missing(): 通过MICE算法填补缺失值
+
+mice包是R中非常著名的用来填补缺失值的工具包，但是它的帮助文档极长。这里我们将它简化为初始的功能来进行数据缺失值的填补。这个方程的参数和用法如下：
+
+
+**impute_missing(dataframe,ord.col,ignore.predictor=NA,ignore.imputation=NA)**
+
+- *dataframe:*	数据框型变量
+
+- *ord.col:*	一个字符串向量，表示的列名将被mice当做有序型字符串变量
+
+- *ignore.predictor:*	不需要被用作填补其他列缺失值时的参考的列的列名，初始设定为NA
+
+- *ignore.imputation:*	不需要被填补缺失值的列的列名. 初始设定为 NA
+
+```{r,message=FALSE}
+test_df=tmall_milk_sales
+test_df[sample(1:nrow(test_df),200),'promotion'] <- NA
+test_df[sample(1:nrow(test_df),50),'feature'] <- NA
+test_df[sample(1:nrow(test_df),20),'units'] <- NA
+test_df[sample(1:nrow(test_df),5),'unit_price'] <- NA
+test_df[sample(1:nrow(test_df),20),'label'] <- NA
+
+df_imputed1=impute_missing(test_df,ord.col="label")
+sapply(df_imputed1$impute,function(x) sum(is.na(x)))
+
+df_imputed2=impute_missing(test_df,ord.col="label",
+                           ignore.imputation = "unit_price")
+sapply(df_imputed2$impute,function(x) sum(is.na(x)))
+
+## to check whether the imputation make sense
+densityplot(df_imputed1$pool,scales=list(x=list(relation='free')))
+```
+
+## 2. 数据可视化
+
+### 2.1 bar_plot(): 堆叠的柱状图展示多个类别变量的分布信息
+
+柱状图在数据分析中非常常见，这个函数通过堆叠的展示方式来展示具有三维信息的柱状图。其用法和参数如下：
+
+**bar_plot(dataframe,ctg.idx,num.idx,condition.idx,criteria,top_N,colors,xaxis_name,**
+**yaxis_name,title,...)**
+
+- *dataframe:* 数据框变量
+
+- *ctg.idx:* 横轴所在列的列名或位置
+
+- *num.idx:* 表示柱子高度的变量所在列的列名或位置
+
+- *condition.idx:* 类别变量所在列的列名或位置
+
+- *criteria:*	筛选变量的条件
+
+- *top_N:*	一个整数，如果类别太多，用这个来选择只展示一部分的变量
+
+- *colors:*	表示颜色的一个向量
+
+- *xaxis_name:*	x轴的名字
+
+- *yaxis_name:*	y轴的名字
+
+- *title:* 图的标题
+
+- *...:* 其他画图变量，主要包括背景颜色和边界
+
+```{r}
+bar_plot(dataframe=estate_fin_charts,
+         ctg.idx = 'Year',num.idx = 'income',
+         condition.idx = '证券简称',criteria=2016,top_N=12,
+         colors=brewer.pal(12,'Set3'),
+         xaxis_name='年份',yaxis_name='营业收入（亿元）',
+         title='2016年营业收入前12名房地产企业历年营收变化',
+         paper_bgcolor='#ccece6',margin=list(t=36,l=24))
+
+bar_plot(dataframe=macro_data_chn,
+         ctg.idx='year',num.idx=c(9:12),
+         criteria = 2016,colors = brewer.pal(4,'Set1'),
+         xaxis_name = '年份',yaxis_name = '商品价格（元/吨）',
+         title='一些大宗商品的历年价格变化',
+         paper_bgcolor='#ccece6',margin=list(t=36,l=24))
+```
+
+### 2.2 bubble_plot(): 通过颜色和大小展示更多信息的气泡图
+
+气泡图是展示多维信息最简单的方式。例如可以通过气泡的颜色、大小、位置展示四个维度的信息。这个函数让画气泡图变得很容易。其参数和用法如下：
+
+**bubble_plot(dataframe,ctg.idx,num.idx,size.idx,color.idx,text.idx,colors,xaxis_name,**
+**xaxis_format,yaxis_name,yaxis_format,legend_pos_y=1,title,...)**
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	x轴对应变量所在列的列名或位置
+
+- *num.idx:*	y轴对应变量所在列的列名或位置
+
+- *size.idx:* 决定气泡大小变量所在列的列名或位置
+
+- *color.idx:*	决定气泡颜色变量所在列的列名或位置
+
+- *text.idx:* 小标签展示信息对应列的列名或位置
+
+- *colors:* 画气泡用的颜色
+
+- *xaxis_name:*	x轴的名字
+
+- *xaxis_format:*	x轴的数据格式，通常是 "none" 或者 "%"
+
+- *yaxis_name:* y轴的名字
+
+- *yaxis_format:* y轴的数据格式，通常是 "none" 或者 "%"
+
+- *legend_pos_y:* 图例在y轴方向上的位置
+
+- *title:* 图的标题
+
+- *...:* 其他画图参数，通常是背景颜色或边界
+
+
+```{r}
+test_df=machinery_fin_charts%>%
+  filter(年份==2017 & 分类=='通用设备')
+bubble_plot(dataframe=test_df,ctg.idx=15,num.idx='毛利率',size.idx='主营业务收入',
+            color.idx='经济区划分',text.idx=7,colors=brewer.pal(8,'Set1'),
+            xaxis_name='营收CAGR5',yaxis_name='毛利率',xaxis_format='%',yaxis_format='%',
+            title='通用设备企业实力气泡图（2017）',paper_bgcolor='#ccece6')
+
+test_df=machinery_fin_charts%>%
+  filter(年份==2017 & 分类=='电力设备')
+bubble_plot(dataframe=test_df,ctg.idx=10,num.idx='毛利率',size.idx='主营业务收入',
+            color.idx=15,text.idx=7,
+            colors='Reds',xaxis_name='员工总数（人）',yaxis_name='毛利率',
+            xaxis_format='',yaxis_format='%',legend_pos_y = 1.02,
+            title='电力设备企业实力气泡图（2017）',paper_bgcolor='#ccece6')
+```
+
+
+### 2.3 corr_check(): 变量间相关关系检验图
+
+做回归前一定要检查变量间的相关关系，也可以通过相关关系来选择与Y变量比较相关的x变量加以研究。这个函数通过不同的颜色直观的展示相关性。其用法和参数如下：  
+
+**corr_check(dataframe,eliminate)**
+
+- *dataframe:*	一个数据框型变量
+
+- *eliminate:*	不想在图中展示的变量所在列的名字或位置。通常为id所在列或者y变量所在列
+
+```{r}
+corr_check(dataframe=macro_data_chn,eliminate = 'year')
+```
+
+```{r}
+## another example, add a categorical variable,
+## see if the function eliminate it automatically
+test_df=macro_data_chn
+test_df$ctg='cat'
+corr_check(dataframe = test_df,eliminate=c(1,2))
+```
+
+### 2.4 distribution_plot(): 包含三种输出形式的数值型变量分布图
+
+对数值型变量要检查它的分布，有时亦可以看看它关于某个分类变量的分布，这个函数提供了三种展示分布的方法。用法和参数如下： 
+
+**distribution_plot(dataframe,ctg.idx=NA,num.idx,type='histogram',xaxis_name,labels=NA,**
+**yaxis_name,title,...)**
+
+- *dataframe:* 数据框型变量
+
+- *ctg.idx:* 横轴所在列的列名或位置，对’histogram‘为空， 默认为 NA
+
+- *num.idx:* 分布代表的数值型变量所在列的列名或者位置
+
+- *type:*	字符串，可以取：'histogram', 'violin' 或者 'box', 怎么样展示分布，默认是 'histogram'
+
+- *xaxis_name:*	x轴的名字
+
+- *tick_text:* 	箱线图或提琴图对应的x轴的标签
+
+- *yaxis_name:*	y轴名字
+
+- *title:*	图的标题
+
+- *...:* 其他画图参数，通常是背景颜色或边界
+
+```{r}
+distribution_plot(dataframe=tmall_milk_sales,
+                  ctg.idx=NA,num.idx='unit_weight',
+                  type='histogram',xaxis_name='单位净含量（克）',
+                  yaxis_name='产品数量（件）',
+                  title='线上销售乳制品单位净含量分布')
+distribution_plot(dataframe=tmall_milk_sales,
+                  ctg.idx=11,num.idx='unit_weight',
+                  type='violin',xaxis_name='销量情况',
+                  tick_text=c('热销产品','普通产品','滞销产品'),
+                  yaxis_name='单位净含量（克）',
+                  title='线上销售乳制品单位净含量按销量分布',
+                  paper_bgcolor='#ccece6')
+distribution_plot(dataframe=tmall_milk_sales,
+                  ctg.idx=2,num.idx='unit_weight',
+                  type='box',xaxis_name='销量情况',
+                  tick_text=c('酸奶产品','牛奶产品'),
+                  yaxis_name='单位净含量（克）',
+                  title='线上销售乳制品单位净含量按产品线分布',
+                  paper_bgcolor='#ccece6',
+                  margin=list(t=36,l=36,b=36,l=10))
+```
+
+### 2.5 donut_plot(): 甜甜圈图展示类别变量的百分比
+
+甜甜圈图比饼状图好看，是类似饼状图的展示方式。用法如下：
+
+**donut_plot(dataframe,ctg.idx,num.idx,condition,condition.idx,colors,hole_size=0.5,**
+**title,legendOn=TRUE,...)**
+
+- *dataframe:* 数据框型变量
+
+- *ctg.idx:*	分类变量所在列的列名或者位置
+
+- *num.idx:* 决定百分比的数值型变量所在列的列名或者标题
+
+- *condition:*	怎么选取一部分的数据
+
+- *condition.idx:* 	选取数据的条件所在列的列名或者标题，可以没有，没有函数就自己找
+
+- *colors:*	画各个部分用到的颜色
+
+- *hole_size:*	甜甜圈中间洞的大小，初始设定为 0.5
+
+- *title:*	图的标题
+
+- *legendOn:*	是否添加图例，不添加的话直接在图上标明信息
+
+- *...:* 其他画图参数，主要是背景色和边界设置
+
+```{r}
+donut_plot(dataframe=machinery_fin_charts,
+           ctg.idx="分类",num.idx='主营业务收入',
+           condition=2017,condition.idx='年份',
+           colors=c("#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072",
+                    "#80B1D3" ,"#FDB462", "#B3DE69"),
+           title='机械行业营收构成（2017）',
+           legendOn=FALSE,paper_bgcolor='#ccece6')
+
+donut_plot(dataframe=dairy_fin_charts,
+           ctg.idx="name",num.idx='income',
+           condition=2017,condition.idx='Year',colors = "",
+           title='乳制品企业市场份额（2017）',legendOn=TRUE,
+           paper_bgcolor='#ccece6',margin=list(t=30,b=72))
+
+```
+
+### 2.6 double_axis(): 在同一幅图中同时画柱状图和折线图
+
+折线图和柱状图在同一幅图中展示。excel经典可视化的R版。用法如下： 
+
+**double_axis(dataframe,ctg.idx,lines.idx,bars.idx,condition,condition.idx,lines.mode,**
+**lines.colors,lines.width=2,lines.names,bars.colors,bars.names,xaxis_name,**
+**line.axis_format="",line.axis_name,bar.axis_name,title,annOn,...)**
+
+- *dataframe:*数据框型变量
+
+- *ctg.idx:*横轴对应列的列名或位置
+
+- *lines.idx:* 折线图展示的变量对应列的列名或位置
+
+- *bars.idx:*	柱状图展示的变量对应列的列名或位置
+
+- *condition:*如何选择一部分的数据
+
+- *condition.idx:*选择条件所在列的列名或位置，可以为空，空会自己找
+
+- *lines.mode:*	线的展示方式，通常是 'lines' 或 'lines+markers'
+
+- *lines.colors:*	画折线图用到的颜色
+
+- *lines.width:*	线宽，初始设置为 2
+
+- *lines.names:*	线的名字，出现在图例中
+
+- *bars.colors:*	画柱状图的颜色
+
+- *bars.names:*	柱状图的名字，出现在图例中
+
+- *xaxis_name:*	x轴的名字
+
+- *line.axis_format:*	折线图数据的格式，初始是 ""
+
+- *line.axis_name:*	折线图对应y轴的名字，出现在左边
+
+- *bars.axis_name:*	柱状图对应y轴的名字，出现在右边
+
+- *title:* 图的标题
+
+- *annOn:*	是否在图上增加折线的点的说明
+
+- *...:* 其他画图参数，通常是背景颜色或边界
+
+```{r}
+test_df=dairy_fin_charts%>%
+  filter(name=='伊利股份')
+double_axis(dataframe=test_df,
+            ctg.idx='Year',lines.idx='profit',
+            bars.idx=2,lines.mode='lines+markers',
+            lines.colors='rgb(128,0,128)',lines.names = '营业利润',
+            bars.colors = 'rgba(55,128,192,0.7)',
+            bars.names = '营业收入',xaxis_name = '年份',
+            line.axis_name = '营业利润（亿元）',
+            bar.axis_name = '营业收入（亿元）',
+            title='伊利股份营收及利润',annOn=T,
+            margin=list(r=40))
+
+double_axis(dataframe=estate_fin_charts,ctg.idx='Year',lines.idx=c(5,6),
+            bars.idx=c('asset','liability'),condition='万科A',lines.mode = 'lines',
+            lines.colors = c("rgb(128, 0, 128)",'rgb(255,140,0)'),
+            lines.width = 4,lines.names=c('总资产收益率','净资产收益率'),
+            bars.colors = c('rgba(55,128,192,0.7)','rgba(219, 64, 82,0.7)'),
+            bars.names = c('总资产','总负债'),xaxis_name = '年份',
+            line.axis_format = '',line.axis_name='百分比',bar.axis_name = '单位：亿元',
+            title='财务分析（万科A）',annOn=F,
+            legend=list(x=0.45,y=1.03,orientation='h',
+                        font=list(size=10),bgcolor="transparent"),
+            margin=list(r=54),paper_bgcolor='#ccece6')
+```
+
+**Note:** 当选择添加数字说明时要注意，过多的字会让图变得不清晰。
+
+```{r}
+double_axis(dataframe=estate_fin_charts,
+            ctg.idx='Year',lines.idx=c(5,6),
+            bars.idx=c('asset','liability'),
+            condition='万科A',lines.mode = 'lines+markers',
+            lines.colors = c("rgb(128, 0, 128)",'rgb(255,140,0)'),
+            lines.width = 4,lines.names=c('总资产收益率','净资产收益率'),
+            bars.colors = c('rgba(55,128,192,0.7)','rgba(219, 64, 82,0.7)'),
+            bars.names = c('总资产','总负债'),
+            xaxis_name = '年份',line.axis_format = '',
+            line.axis_name='百分比',bar.axis_name = '单位：亿元',
+            title='财务分析（万科A）',annOn=T,
+            legend=list(x=0.45,y=1.03,orientation='h',
+                        font=list(size=10),bgcolor="transparent"),
+            margin=list(r=54),paper_bgcolor='#ccece6')
+```
+
+### 2.7 facet_bar(): 通过小窗口细分大柱状图
+
+通过细分柱状图展示更多维度的信息。参考如下： 
+
+**facet_bar(dataframe,ctg.idx,num.idx,condition.idx,label.idx,legend_name,legend_label,**
+**colors,xaxis_name,xaxis_label,yaxis_name,title,type='histogram',stack=F,paper_bgcolor**
+**="#f2f2f2")**
+
+- *dataframe:* 数据框型变量
+
+- *ctg.idx:* 每个小柱形图里，横轴对应变量的列的列名或位置 
+
+- *num.idx:*	每个小柱形图里，纵轴对应变量的列的列名或位置，决定柱子高度，如果是’histogram‘则可以没有 
+
+- *condition.idx:*	图例所在列的列名或位置
+
+- *label.idx:*决定细分小窗口的变量所在列的列名
+
+- *legend_name:*	图例的标题
+
+- *legend_label:* 图例标签的名字
+
+- *colors:*	画图的颜色变量
+
+- *xaxis_name:*	x轴的名字
+
+- *xaxis_label:*	x轴上标签的名字
+
+- *yaxis_name:*	y轴名字
+
+- *title:*	图的标题
+
+- *type:*	'histogram'还是 'bar', 默认是 'histogram'.
+
+- *stack:* 叠加还是并排放柱子，默认是TRUE，即叠加
+
+- *paper_bgcolor:* 画图背景颜色，默认是"#f2f2f2"
+
+```{r}
+facet_bar(dataframe=tmall_milk_sales,
+          ctg.idx='label',num.idx=9,
+          condition.idx='promotion',label.idx='brand',
+          legend_name='是否促销',
+          legend_label=c('不促销','促销'),
+          colors=c('#A6CEE3','#1F78B4'),xaxis_name='产品类型',
+          xaxis_label=c('热销产品','普通产品','滞销产品'),
+          yaxis_name='价格（元）',
+          title='线上乳制品分类销售情况',
+          type='bar',stack=T,
+          paper_bgcolor='#ccece6')
+
+facet_bar(dataframe=tmall_milk_sales,
+          ctg.idx='class',num.idx=NA,
+          condition.idx='label',label.idx='brand',
+          legend_name='产品类型',
+          legend_label=c('热销产品','普通产品','滞销产品'),
+          colors=brewer.pal(3,'Set2'),xaxis_name='分类',
+          xaxis_label=c('酸奶','牛奶'),
+          yaxis_name='产品数（件）',title='线上乳制品分类销售情况',
+          paper_bgcolor='#ccece6')
+```
+
+### 2.8 horizontal_bar(): 横向柱状图展示百分比
+
+当柱子的长度统一时，比如都是百分比，用横向柱状图展示很好看。这个函数可以计算两个分类变量下样本数量的百分比。示例如下： 
+
+**horizontal_bar(dataframe,h.idx,v.idx,h_name,v_name,colors,xaxis_name,title,...)**
+
+- *dataframe:*	数据框型变量
+
+- *h.idx:*	横向分类变量所在列的列名或位置
+
+- *v.idx:*	纵向分类变量所在列的列名或位置
+
+- *h_name:*	横向轴的标签名
+
+- *v_name:*	纵向轴的标签名
+
+- *colors:*	画柱子的颜色
+
+- *xaxis_name:*	x轴的名字
+
+- *title:*	图的名字
+
+- *...:* 其他画图参数，通常是背景颜色或边界
+
+```{r}
+horizontal_bar(dataframe=tmall_milk_sales,
+               h.idx='label',v.idx='pack',
+               h_name=c('热销产品','普通产品','滞销产品'),
+               v_name=c('爱克林包装','杯装','袋装','盒装','瓶装'),
+               colors = brewer.pal(3,'Set1'),
+               xaxis_name='百分比',
+               title='电商乳制品产品线分类统计')
+
+horizontal_bar(dataframe=tmall_milk_sales,h.idx='feature',v.idx='label',
+               h_name=c('儿童牛奶','养生牛奶','新出产品','其他产品',
+                        '牛奶饮料','主推产品'),
+               v_name=c('热销产品','普通产品','滞销产品'),
+               colors = c('#E41A1C','#377EB8','#4DAF4A','#984EA3',
+                          '#FF7FF0','#FFD92F'),
+               xaxis_name='百分比',
+               title='电商乳制品产品线分类统计',
+               paper_bgcolor='#ccece6',
+               plot_bgcolor='#ccece6')
+```
+
+### 2.9 label_bar_plot(): 带小标签的柱状图
+
+带小标签的柱状图，比一般柱状图更美观些。用法示例如下：
+
+**static_bar_plot(dataframe,ctg.idx,num.idx,condition.idx,criteria,top_N,colors,xaxis_name,**
+**title,paper_bgcolor='#f2f2f2')**
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	选取部分数据的变量所在列的列名或位置
+
+- *num.idx:*	决定柱子高度的数值型变量所在列的列名或位置
+
+- *condition.idx:* 决定图例变量所在的列的列名或位置
+
+- *criteria:*	怎么选取一部分数据画图
+
+- *top_N:* 如果类别太多，选择展示其中排名靠前的
+
+- *colors:*	画图的颜色
+
+- *xaxis_name:* x轴标题
+
+- *title:*	图的标题
+
+- *paper_bgcolor:* 画图的背景色，初始设定为 "#f2f2f2"
+
+```{r}
+label_bar_plot(dataframe=estate_fin_charts,
+               ctg.idx='Year',num.idx='roa',
+               condition.idx = '证券简称',criteria=2016,
+               top_N=10,colors='#377EB8',
+               xaxis_name = 'ROA',
+               title='房地产企业2016年ROA排名前十企业')
+
+label_bar_plot(dataframe=macro_data_chn,
+               ctg.idx='year',num.idx=c(9:12),
+               criteria=2016,colors=brewer.pal(4,'Set1'),
+               xaxis_name = '价格（元/吨）',
+               title='大宗商品商品2016年价格',
+               paper_bgcolor = '#ccece6')
+```
+
+对横截面数据只要手动加一个当做字符型变量的列即可正常使用。
+
+```{r}
+## cross-sectional data
+test_df=estate_fin_charts%>%
+  filter(Year==2016)%>%
+  select(证券简称,income)
+## make plot
+test_df$Year=2016
+label_bar_plot(dataframe=estate_fin_charts,
+               ctg.idx='Year',num.idx='roa',
+               condition.idx = '证券简称',
+               criteria=2016,top_N=10,
+               colors='#377EB8',
+               xaxis_name = 'ROA',
+               title='房地产企业2016年ROA排名前十企业',
+               paper_bgcolor='#ccece6')
+
+```
+
+### 2.10 line_plot(): 基本折线图
+
+基本折线图，可以选择颜色宽度等等参数。用法和参数如下： 
+
+**lines_plot(dataframe,ctg.idx,num.idx,condition,condition.idx,colors,mode='lines',**
+**yaxis_name="",linewidth=2,title,...)**
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	x轴所在列的列名或位置
+
+- *num.idx:*	y轴所在列的列名或位置
+
+- *condition:*	怎么选取一部分数据
+
+- *condition.idx:* 	选取条件所在列的列名或位置
+
+- *colors:*	画线的颜色
+
+- *mode:*	每个线的模式，要不要加点，通常为 'lines' 或 'lines+markers' 
+
+- *yaxis_name:* 	y轴的名字
+
+- *linewidth:*	线的宽度，整数
+
+- *title:*	图的标题
+
+- *...:* 其他画图参数，通常是背景颜色或边界
+
+```{r}
+lines_plot(dataframe=dairy_fin_charts,
+           ctg.idx = 5,num.idx = 2,
+           condition=c('伊利股份','蒙牛股份','光明乳业'),
+           colors=c("#00526d","#de6e6e","#32ab60"),
+           yaxis_name = '营业收入',linewidth = 4,
+           title='乳制品企业营业收入图')
+
+lines_plot(dataframe=dairy_fin_charts,
+           ctg.idx = 5,num.idx = 2,
+           condition=c('伊利股份','蒙牛股份','光明乳业'),
+           colors=c("#00526d","#de6e6e","#32ab60"),
+           mode='lines+markers',linewidth = 2,
+           title='乳制品企业营业收入图',
+           yaxis_name='营业收入',
+           xaxis=list(showgrid=F,nticks=10,ticklen=4,tickangle=-45,
+                     ticks='outside',tickmode="array",
+                     type='category',title="年份"),
+           yaxis=list(visible=F),
+           legend=list(x=0.5,y=0.1,orientation='h',
+                      font=list(size=10),bgcolor="transparent"),
+           paper_bgcolor='#ccece6',
+           margin=list(t=32,l=32,r=32))
+```
+
+
+### 2.11 lines_split_plot(): 通过子图绘制范围差别较大的折线图
+
+当折线表示的数值型变量差距较大时，一张图很难看清，因此可以用到子图来展示。这个函数的用法和参数如下： 
+
+**lines_split_plot(p=lines_split(dataframe,ctg.idx,num.idx,condition,condition.idx,colors,**
+**mode='lines',yaxis_name="",linewidth=2,title,...),...)**
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	x轴所在列的列名或位置
+
+- *num.idx:*	y轴所在列的列名或位置
+
+- *condition:*	怎么选取一部分数据
+
+- *condition.idx:* 	选取条件所在列的列名或位置
+
+- *colors:*	画线的颜色
+
+- *mode:*	每个线的模式，要不要加点，通常为 'lines' 或 'lines+markers' 
+
+- *yaxis_name:* 	y轴的名字
+
+- *linewidth:*	线的宽度，整数
+
+- *title:*	图的标题
+
+- *...:* lines_split 中的...主要是坐标轴、图例、背景等的设置 ， lines_split_plot中的...是各个y轴的设置
+
+```{r}
+lines_split_plot(p=lines_split(dataframe=macro_data_chn,ctg.idx = 'year',
+                 num.idx = c(3,5,6,9),
+                 colors=c("#00526d","#de6e6e","#32ab60","#ff8000"),
+                 title="一些宏观经济指标走势",
+                 xaxis=list(showgrid=F,ticklen=4,nticks=3,title="年份"),
+                 legend=list(x=0.5,y=1.05,orientation='h',bgcolor='transparent'),
+                 paper_bgcolor='#ccece6',
+                 margin=list(t=32,l=32,r=32)),
+                 yaxis=list(visible=F),
+                 yaxis2=list(visible=F),
+                 yaxis3=list(visible=F),
+                 yaxis4=list(visible=F))
+
+lines_split_plot(p=lines_split(dataframe=macro_data_chn,ctg.idx = 'year',
+                 num.idx = c(3,5,6,9),
+                 colors=c("#00526d","#de6e6e","#32ab60","#ff8000"),
+                 title="一些宏观经济指标走势",
+                 xaxis=list(showgrid=F,ticklen=4,nticks=3,title="年份"),
+                 legend=list(x=0.5,y=1.05,orientation='h',bgcolor='transparent'),
+                 paper_bgcolor='#ccece6',
+                 margin=list(t=32,l=32,r=32)))
+```
+
+### 2.12 line_ann_plot(): 通过标点和附注丰富折线图信息
+
+给折线图加上关于转折点的标记信息能极大的丰富图展示的内容。这个函数能快速上手做出相应的图。其用法说明如下：  
+
+**line_ann_plot(dataframe,ctg.idx,num.idx,condition,condition.idx,colors,events,**
+**marker_pos_x,ann_pos_x,text_pos_x,ann_pos_y,marker_refer,marker_pos_adj,yaxis_name,title,**
+**marker_color='rgb(246,78,139)',...)**
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	x轴的变量所在列的列名或位置
+
+- *num.idx:*	y轴的变量所在列的列名或位置
+
+- *condition:*	选取部分数据的条件
+
+- *condition.idx:*	筛选条件所在列的列名或位置
+
+- *colors:*	画线的颜色
+
+- *events:*	关于每个标点的解释，字符串组成的向量
+
+- *marker_pos_x:*	图上标点在x轴方向的位置
+
+- *ann_pos_x:*	说明中的标点在x轴方向的位置
+
+- *text_pos_x:*	解释信息在x轴方向的位置
+
+- *ann_pos_y:*	说明中的标点在y轴方向的位置
+
+- *marker_refer:*	为哪条线标记标点
+
+- *marker_pos_adj:*	是否要稍微调整一下标点在y轴方向上的位置
+
+- *yaxis_name:*	y轴的名字
+
+- *title:*	图的标题
+
+- *marker_color:*	标点的颜色，默认设置是 'rgb(246,78,139)'(偏向紫色)
+
+- *...:* 其他画图参数，通常是背景颜色和边界
+
+```{r}
+line_ann_plot(dataframe=dairy_fin_charts,
+              ctg.idx='Year',num.idx='profit',
+              condition=c('伊利股份','蒙牛股份','光明乳业'),
+              colors = c("#00526d","#de6e6e","rgb(50,171,96)"),
+              events = c("中国奶制品污染事件&金融危机",
+                         "公布和实施经济刺激计划",
+                         "“互联网+”：传统行业进入电商时代",
+                         "中央一号文件：全面振兴奶业"),
+              marker_pos_x = c(2008,2009,2012,2017),
+              ann_pos_x = 2006, text_pos_x = 0.1, 
+              ann_pos_y = c(78,74,70,66),
+              marker_refer = c('光明乳业','蒙牛股份','伊利股份','伊利股份'),
+              yaxis_name = '利润总额（亿元）',
+              title = '乳制品企业利润变动与行业重要事件')
+
+line_ann_plot(dataframe=dairy_fin_charts,
+              ctg.idx='Year',num.idx='profit',
+              condition=c('伊利股份','蒙牛股份','光明乳业'),
+              colors = c("#00526d","#de6e6e","rgb(50,171,96)"),
+              events = c("中国奶制品污染事件&金融危机",
+                         "公布和实施经济刺激计划",
+                         "“互联网+”：传统行业进入电商时代",
+                         "中央一号文件：全面振兴奶业"),
+              marker_pos_x = c(2008,2009,2012,2017),
+              ann_pos_x = 2006, text_pos_x = 0.1, 
+              ann_pos_y = c(78,74,70,66),
+              marker_refer = c('光明乳业','蒙牛股份','伊利股份','伊利股份'),
+              marker_pos_adj=3,
+              yaxis_name = '利润总额（亿元）',
+              title = '乳制品企业利润变动与行业重要事件',
+              legend = list(x=0.5,y=0.1,orientation='h',
+                            font=list(size=10),bgcolor='transparent'),
+              xaxis = list(showgrid=T,nticks=12,
+                           ticks="outside",title="年份"),
+              paper_bgcolor='#ccece6')
+```
+
+### 2.13 polar_charts(): 雷达图
+
+雷达图可以用来比较几个样本在多个维度上的差异。这个函数的用法和参数如下：
+
+**polar_charts(dataframe,colors,fills,fillcolors,title,...)**
+
+- *dataframe:*	数据框型变量
+
+- *colors:*	 画雷达上线的颜色向量
+
+- *fills:*	'none'或者'toself'表示是否填充线围起来的多边形
+
+- *fillcolors:*	填充的颜色
+
+- *title:*	图的标题
+
+- *...:* 其他画图参数，通常是背景颜色和边界
+
+```{r}
+## prepare data, it's generate from analysis of NASDAQ: MDLZ
+MDLZ=c(6,5,2,6,1,5,1,1,3,1,2,2,10,10,9,9)
+others=c(7,9,6,6,3,2,2,2,3,2,4,4,10,10,9,9)
+polar.dataframe=rbind(MDLZ,others)
+row.names(polar.dataframe)=c('亿滋国际','市场同业竞争者均值')
+colnames(polar.dataframe)=c('股息收益','净资产收益率',
+                            '资产回报率','息税前利润',
+                            '销售增长率','净收入增长率',
+                            '营收增长期望','每股盈余期望',
+                            '市盈率','市售率',
+                            '企业价值倍数','市现率',
+                            '总市值','成交量',
+                            '波动性','风险系数')
+
+## a simple example
+polar_charts(dataframe=polar.dataframe,
+             colors=c('#FF7F00','#33A02C'),
+             fills=c('toself','none'),
+             fillcolors=c('#FDBF6F','#B2DF8A'),
+             title='亿滋国际和同行竞争对手股票指标对比',
+             margin=list(t=56))
+
+## another way
+polar_charts(dataframe=polar.dataframe,
+             colors=c('#FF7F00','#33A02C'),
+             fills=c('toself','toself'),
+             fillcolors=c('rgba(253,191,111,0.3)','rgba(178,223,138,0.3)'),
+             title='亿滋国际和同行竞争对手股票指标对比',
+             legend=list(x=1,y=0,bgcolor='transparent',
+                         font=list(size=14,family='heiti')),
+             margin=list(t=56),
+             paper_bgcolor='#ccece6')
+```
+
+### 2.14 rank_plot(): Plotting change of ranks over index
+
+用折线图来展示各个类别变量的排序变化。用法和参数说明如下：
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	横轴所在列的列名或位置
+
+- *num.idx:*	用来排序的数值型变量所在列的列名或位置
+
+- *condition.idx:*	图例所在的类别型变量的列名或位置
+
+- *criteria:*	筛选样本的条件
+
+- *top_N:*	整数，如果展示的类别太多，用这个参数选择其中的一部分
+
+- *colors:*	包含颜色的向量，用来指定颜色
+
+- *yaxis_name:*	y轴的名字
+
+- *title:*	图的标题
+
+- *...:* 其他画图参数，通常包含背景颜色和边界
+
+
+```{r}
+rank_plot(dataframe=estate_fin_charts,
+          ctg.idx = 'Year',num.idx = 'margin',
+          condition.idx = '证券简称',
+          criteria=2016,top_N=5,
+          colors=brewer.pal(5,'Set1'),
+          yaxis_name='利润排名',
+          title='2016年利润排名前5的房地产企业历年排名变化',
+          paper_bgcolor='#ccece6',
+          margin=list(t=36,l=24))
+
+
+test_df = macro_data_chn
+test_df[1:3,9] <- NA
+rank_plot(dataframe=test_df,
+          ctg.idx='year',num.idx=c(9:12),
+          criteria = 2016,
+          colors = brewer.pal(4,'Set1'),
+          yaxis_name = '商品价格排名',
+          title='一些大宗商品的历年价格排名',
+          xaxis = list(showgrid=T,nticks=5,
+                       ticklen=4,tickangle=-45,
+                       ticks='outside',tickmode="auto",
+                       type='category',title="年份"),
+          paper_bgcolor='#ccece6',
+          margin=list(t=36,l=24))
+
+```
+
+**注意:** 当画超过6个类别的排名时会有warning说R只有6种线性，但是不用担心，函数里已经将这点考虑了。
+
+
+## 3. 数据基本分析
+
+### 3.1 cal_pct(): 计算类别对应的百分比
+
+我们经常需要计算某一类别型变量下的各个类别基于某个数值型变量的百分比，例如计算公司的市场占有率等。这个函数的用法和变量如下：
+
+**cal_pct(dataframe,ctg.idx,num.idx,condition,condition.idx)**
+
+- *dataframe:*	数据框型变量
+
+- *ctg.idx:*	字符型变量所在列的列名或位置
+
+- *num.idx:* 数值型变量所在列的列名或位置
+
+- *condition:* 一个数值或者字符，怎么筛取一部分数据
+
+- *condition.idx:*	数值或者字符，判定条件所在的列
+
+```{r}
+cal_pct(dairy_fin_charts,
+        ctg.idx = 'name',
+        num.idx = "income",
+        condition=2017)
+
+## another way to get the same result
+cal_pct(dairy_fin_charts[dairy_fin_charts$Year==2017,],
+        ctg.idx = 1,
+        num.idx = 2)
+
+cal_pct(dairy_fin_charts,
+        ctg.idx = 1,num.idx = 2,
+        condition=2010)
+```
+
+### 3.2 get_rank(): 多类排序
+
+有时候我们需要对很多类按某一个值的大小排序，当有数值相同或者有缺失值时可能会出现问题。这个函数可以处理这些问题。其用法和参数如下：
+
+**get_rank(dataframe,ctg.idx,num.idx,condition,condition.idx)**
+
+- *dataframe:* 数据框型变量
+
+- *ctg.idx:* 字符型变量所在列的位置或者列名
+
+- *num.idx:* 数值变量所在列的列名或者位置
+
+- *condition:* 一个数值或者字符，怎么筛取一部分数据
+
+- *condition.idx:*	数值或者字符，判定条件所在的列
+
+```{r}
+get_rank(dairy_fin_charts,
+         ctg.idx = 'name',
+         num.idx = "income",
+         condition=2017)
+
+get_rank(dairy_fin_charts[dairy_fin_charts$Year==2017,],
+         ctg.idx = 1,num.idx = 2)
+
+## when two categories have same value
+dairy_fin_charts[97,2]=12.40
+get_rank(dairy_fin_charts,
+         ctg.idx = 'name',
+         num.idx = "income",
+         condition=2017)
+
+## when have missing value
+get_rank(dairy_fin_charts,
+         ctg.idx = 1,
+         num.idx = 2,
+         condition=2010)
+
+```
+
+### 3.3 lin_predict(): 动态线性模型的线性外插值
+
+我们非常经常的会遇上需要预测的情况，一种很简单但有效地预测是通过动态线性模型来外插值。这个函数基于带趋势项的随机游走模型进行线性外插值。其用法和参数说明如下：
+
+**lin_predict(dataframe,ts.idx,t_ahead,addCI,ctg.idx,extra_names,xaxis_name,yaxis_name,**
+**title,...)**
+
+- *dataframe:*	数据框型变量
+
+- *ts.idx:*	字符或者数字，要预测的列对应的列名或位置
+
+- *t_ahead:*	整数，要预测几个点
+
+- *addCI:*	是否在画图时加上置信区间
+
+- *ctg.idx:*	数值或者字符，x轴对应的变量
+
+- *extra_names:*	预测的点对应的x轴的标签
+
+- *xaxis_name:*	x轴标题
+
+- *yaxis_name:*	Y轴标题
+
+- *title:*图的标题
+
+```{r}
+GDP_predict=lin_predict(dataframe=macro_data_chn,
+                        ts.idx='GDP',t_ahead=3,
+                        addCI=T,
+                        xaxis_name='Time',
+                        yaxis_name='GDP(元)',
+                        title='GDP未来三年预测')
+GDP_predict$pred.mtx
+GDP_predict$pred.plot
+```
+
+```{r}
+GDP_predict=lin_predict(dataframe=macro_data_chn,
+                        ts.idx='GDP',
+                        t_ahead=3,addCI=T,
+                        ctg.idx=1,extra_names = c(2017,2018,2019),
+                        xaxis_name='年份',
+                        yaxis_name='GDP(元)',
+                        title='GDP未来三年预测',
+                        legend=list(x=0.72,y=0.1,bgcolor='transparent'),
+                        margin=list(t=45,l=45,r=18),
+                        paper_bgcolor='#ccece6')
+GDP_predict$pred.mtx
+GDP_predict$pred.plot
+```
+
+### 3.4 plm_basic(): 面板回归模型的逐步筛选
+
+选择面板数据回归模型中的变量通常都很困难，尤其是在探索阶段，这个函数提供了一个基准模型。它逐步在控制变量的基础上加入最显著的变量，并且在OLS、固定效应和随机效应中选择最好的模型。其用法和参数如下： 
+
+**plm_basic(dataframe,id.idx,t.idx,dep.idx,control.idx,num.idx,step)**
+
+- *dataframe:* 数据框型变量
+
+- *id.idx:*	字符或者数字，表示面板中的组变量
+
+- *t.idx:*	字符或者数字，表示面板的时间变量
+
+- *dep.idx:*	字符或者数字，表示回归中的Y变量
+
+- *control.idx:*	一串字符或者数值，但不能混搭，表示回归中的控制变量
+
+- *num.idx:*	一串字符或者数值，但不能混搭，表示回归中的X变量，应当是数值型变量
+
+- *step:*	需要进行几次筛选
+
+```{r}
+estate_fin_charts$lg_asset=log(estate_fin_charts$asset)
+model.list=plm_basic(dataframe=estate_fin_charts,
+                     id.idx=3,t.idx='Year',
+                     dep.idx='lg_income',
+                     control.idx=c('mkt_price','lg_asset'),
+                     num.idx=c(5,6,7,8,10,11,14,15),step=5)
+
+```
+
+
+**回到：** [示例](https://icssai.github.io/HelpPage/Vignettes.html)

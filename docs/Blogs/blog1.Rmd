@@ -1,0 +1,60 @@
+---
+title: "用柱状图展示市场份额变化"
+author: "Jizhou Kang"
+date: "7/31/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE,fig.width=6,fig.height=4)
+```
+
+## 首先载入工具包和数据
+
+**载入工具包...**
+```{r,message=FALSE,warning=FALSE}
+library(dppbar)
+```
+
+**载入数据...**
+
+为了完整的展示工具包的用途，我们使用了两种不同结构的数据集。它们分别是
+中国房地产企业财报数据(2007-2016)和中国的一些宏观经济数据(2008-2016)，数据详情见下方。
+
+**中国房地产企业财报数据(2007-2016)**
+```{r,echo=FALSE}
+data("estate_fin_charts")
+head(estate_fin_charts[,1:5],5)
+```
+
+**中国的一些宏观经济数据(2008-2016)**
+```{r,echo=FALSE}
+data("macro_data_chn")
+head(macro_data_chn[,1:5],5)
+```
+
+
+## 用5行以内的代码完成绘图:
+
+```{r}
+bar_plot(dataframe=estate_fin_charts,ctg.idx = 'Year',num.idx = 'income',
+         condition.idx = '证券简称',criteria=2016,top_N=10,
+         colors=brewer.pal(12,'Set3'),xaxis_name='年份',yaxis_name='营业收入（亿元）',
+         title='2016年营业收入前12名房地产企业历年营收变化',
+         paper_bgcolor='#ccece6',margin=list(t=36,l=24))
+```
+
+```{r}
+bar_plot(dataframe=macro_data_chn,ctg.idx='year',num.idx=c(9:12),
+         criteria = 2016,colors = brewer.pal(4,'Set1'),
+         xaxis_name = '年份',yaxis_name = '商品价格（元/吨）',
+         title='一些大宗商品的历年价格变化',
+         paper_bgcolor='#ccece6',margin=list(t=36,l=24))
+```
+
+
+
+**回到:** [Blogs](https://icssai.github.io/HelpPage/Blogs.html)
+
+
+

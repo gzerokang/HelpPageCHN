@@ -1,0 +1,16 @@
+---
+title: " 工具包的使用示例"
+output: html_document
+---
+
+
+
+
+
+## 1. "dppbar"包使用帮助: 工具包中所有示例的有序展示
+
+**Description:** 这个网页将“dppbar”中所有的函数及其用法做了详细的说明，并且将函数的结果进行了可视化，可以很方便的查阅相关函数的使用。
+
+**Link:** [使用帮助](https://https://icssai.github.io/HelpPage/Vignettes/vignette1.html)
+
+
