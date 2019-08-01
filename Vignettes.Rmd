@@ -11,6 +11,6 @@ output: html_document
 
 **Description:** 这个网页将“dppbar”中所有的函数及其用法做了详细的说明，并且将函数的结果进行了可视化，可以很方便的查阅相关函数的使用。
 
-**Link:** [使用帮助](https://https://icssai.github.io/HelpPage/Vignettes/vignette1.html)
+**Link:** [使用帮助](https://jkang37.github.io/HelpPageCHN/Vignettes/vignette1.html)
 
 
